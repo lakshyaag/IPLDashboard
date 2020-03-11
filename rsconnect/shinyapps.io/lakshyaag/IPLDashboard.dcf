@@ -1,0 +1,12 @@
+name: IPLDashboard
+title: IPLDashboard
+username:
+account: lakshyaag
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 1924718
+bundleId: 2871965
+url: https://lakshyaag.shinyapps.io/IPLDashboard/
+when: 1583943478.20825
+asMultiple: FALSE
+asStatic: FALSE
