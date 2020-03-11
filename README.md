@@ -6,6 +6,8 @@
 ## The dashboard is live [here.](https://lakshyaag.shinyapps.io/IPLDashboard/)
 [![forthebadge](https://forthebadge.com/images/badges/check-it-out.svg)](https://lakshyaag.shinyapps.io/IPLDashboard/)
 
+[![forthebadge](https://forthebadge.com/images/badges/built-with-love.svg)](#) [![forthebadge](https://forthebadge.com/images/badges/powered-by-responsibility.svg)](https://www.instagram.com/lakshyaag)
+
 
 ## Frameworks / Tools Used
 1. [Shinydashboard](https://rstudio.github.io/shinydashboard/) - for creating the front-end
@@ -16,6 +18,4 @@
 ### Data
 Ball-by-ball data and match data has been taken from [Kaggle](https://www.kaggle.com/manasgarg/ipl) and preprocessed locally.
 
-#####[Version 1.0](https://github.com/lakshyaag/ipl_dashboard)
-
-[![forthebadge](https://forthebadge.com/images/badges/built-with-love.svg)](#) [![forthebadge](https://forthebadge.com/images/badges/powered-by-responsibility.svg)](https://www.instagram.com/lakshyaag)
+#### [Version 1.0](https://github.com/lakshyaag/ipl_dashboard)
