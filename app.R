@@ -505,6 +505,46 @@ h2h_stats <- function(team_data) {
     
 }
 
+get_head_to_head_history <- function(team_data, team_1, team_2) {
+    h2h_data <- team_data %>%
+        mutate(position = case_when(winner == team_1 ~ 1,
+                                    winner == team_2 ~ -1,
+                                    TRUE ~ 0)) %>%
+        mutate(win_by = case_when(win_by_runs > 0 ~ win_by_runs,
+                                  win_by_wickets > 0 ~ win_by_wickets,
+                                  TRUE ~ 0)) %>%
+        mutate(position_win = position * win_by, how_win = case_when(win_by_runs > 0 ~ paste0('Won by ', win_by_runs, ' runs'),
+                                                                     win_by_wickets > 0 ~ paste0('Won by ', win_by_wickets, ' wickets'),
+                                                                     result == 'tie' ~ paste0('Match tied'),
+                                                                     TRUE ~ 'No result')) %>%
+        mutate(plot_text = paste0("<b>Date:</b> ", day(date), " ", month(date, label = T), " ", year(date),
+                                  "\n<b>Winner</b>: ", winner,
+                                  "\n<b>Margin</b>: ", how_win,
+                                  "\n<b>POTM</b>: ", player_of_match,
+                                  "\n<b>Venue</b>: ", venue))
+    
+    h2h_plot <- ggplot(h2h_data, aes(x = date, y = position_win, fill = winner, text = plot_text)) +
+        geom_segment(data = h2h_data, aes(y = position_win, yend = 0, xend = date, color = winner)) +
+        geom_point(aes(size = win_by), alpha = 0.75) +
+        scale_fill_manual(values = team_colors) +
+        scale_color_manual(values = team_colors) +
+        scale_x_date(breaks = date_breaks('1 year'), labels = label_date('%Y')) +
+        theme_ipl() +
+        geom_segment(x = 0, xend = (h2h_data %>% slice(n()) %>% select(date) %>% as.integer()), y = 0, yend = 0, 
+                     size = 0.05, linetype = 'dotted') +
+        coord_flip() +
+        labs(x = 'Season', y = "Margin", title = 'Match history') +
+        theme(axis.text.x = element_blank())
+    
+    
+    plot <- ggplotly(h2h_plot, tooltip = 'text') %>% 
+        layout(autosize = T, dragmode = 'zoom') %>% 
+        config(displayModeBar = F)
+    
+    return(plot)
+    
+}
+
 #### 5.2. Toss statistics
 
 get_toss_stats <- function(team_data, team_1, team_2) {
@@ -728,11 +768,11 @@ body <- dashboardBody(
                 fluidRow(
                     box(width = 12, status = 'success',
                         column(6,
-                               selectInput('team_1', 'Choose team',
+                               selectInput('team_1', 'Choose a team',
                                            choices = teams, selected = 'Chennai Super Kings')
                         ),
                         column(6,
-                               selectInput('team_2', 'Choose team',
+                               selectInput('team_2', 'Choose a team',
                                            choices = teams, selected = 'Mumbai Indians')
                         )
                     )
@@ -742,7 +782,11 @@ body <- dashboardBody(
                                 fluidRow(
                                     valueBoxOutput('team1_wins', width = 4),
                                     valueBoxOutput('total_matches', width = 4),
-                                    valueBoxOutput('team2_wins', width = 4)
+                                    valueBoxOutput('team2_wins', width = 4),
+                                    
+                                    box(width = 12, solidHeader = T, status = 'success', collapsible = T,
+                                        plotlyOutput('h2h_history') %>% withSpinner()
+                                    )
                                 )
                         ),
                        tabPanel('Toss statistics',
@@ -952,6 +996,10 @@ server <- function(input, output) {
             paste0(input$team_2, ' Wins'),
             color = 'fuchsia'
         )
+    })
+    
+    output$h2h_history <- renderPlotly({
+        get_head_to_head_history(team_head_to_head_data(), input$team_1, input$team_2)
     })
     
     output$toss_teams <- renderPlotly({
