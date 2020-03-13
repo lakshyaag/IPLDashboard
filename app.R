@@ -13,6 +13,9 @@ library(shinydashboard)
 library(shinycssloaders)
 library(DT)
 
+library(waiter)
+library(sever)
+
 options(spinner.type = 8)
 
 balls <- vroom('data.csv', delim = ',') %>% mutate(date = dmy(date))
@@ -652,11 +655,15 @@ sidebar <- dashboardSidebar(
         menuItem("Head-to-head", tabName = 'headtohead', icon = icon('drum-steelpan')), #5
         menuItem(""),
         menuItem('Created by Lakshya Agarwal', href = 'https://github.com/lakshyaag/', newtab = T, 
-                 icon = icon('magic'))
+                 icon = icon('magic')),
+        menuItem('Check out the code!', href = 'https://github.com/lakshyaag/ipldashboard', newtab = T, 
+                 icon = icon('github'), badgeLabel = 'New', badgeColor = 'aqua')
     )
 )
 
 body <- dashboardBody(
+    use_sever(),
+    use_waiter(), 
     tabItems(
         tabItem('about', 
                 fluidRow(
@@ -805,15 +812,22 @@ body <- dashboardBody(
                            )
                 )
         )
-    )
+    ),
+    waiter_show_on_load(html = spin_wobblebar(), color = '#546E7A')
 )
 
-ui <- dashboardPage(header, sidebar, body, skin = 'black')
+ui <- dashboardPage(header, sidebar, body, skin = 'red')
 
 ## server.R
 
 server <- function(input, output) {
+    sever(html = sever_default(title = 'Disconnected!', 
+                               subtitle = 'Your session ended.', 
+                               button = 'Reload', button_class = 'info'),
+          color = 'white', bg_color = '#546E7A')
     
+    waiter_hide()
+
     output$about_image <- renderUI({
         img(src = 'https://iplt20scores.com/wp-content/uploads/2020/01/IPL-logo-4.jpg',
              width = '100%',

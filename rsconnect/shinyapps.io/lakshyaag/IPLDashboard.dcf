@@ -5,8 +5,8 @@ account: lakshyaag
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 1924718
-bundleId: 2872410
+bundleId: 2877781
 url: https://lakshyaag.shinyapps.io/IPLDashboard/
-when: 1583951186.02189
+when: 1584093462.30813
 asMultiple: FALSE
 asStatic: FALSE
