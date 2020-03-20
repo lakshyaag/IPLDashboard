@@ -14,6 +14,9 @@
 2. [Plotly](https://plot.ly/r/) - an interactive high-level graphing library
 3. [Tidyverse](http://tidyverse.org/) - R packages for data science
 
+### TO-DO
+- [ ] Team statistics
+- [ ] Venue statistics
 
 ### Data
 Ball-by-ball data and match data has been taken from [Kaggle](https://www.kaggle.com/manasgarg/ipl) and preprocessed locally.
