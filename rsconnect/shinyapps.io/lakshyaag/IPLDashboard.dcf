@@ -4,9 +4,9 @@ username:
 account: lakshyaag
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
-appId: 1924718
-bundleId: 2877781
+appId: 2290801
+bundleId: 3140824
 url: https://lakshyaag.shinyapps.io/IPLDashboard/
-when: 1584093462.30813
+when: 1589355813.44899
 asMultiple: FALSE
 asStatic: FALSE

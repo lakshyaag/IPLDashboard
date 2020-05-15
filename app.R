@@ -18,7 +18,8 @@ library(sever)
 
 options(spinner.type = 8)
 
-balls <- vroom('data.csv', delim = ',') %>% mutate(date = dmy(date))
+balls <- vroom('data.csv', delim = ',') %>% 
+  mutate(date = dmy(date))
 
 ## Defining themes and colors
 
@@ -677,7 +678,7 @@ body <- dashboardBody(
                     )
                 ),
                 fluidRow(
-                    box(htmlOutput('about_image'), width = 12)
+                    box(imageOutput('about_image'), width = 12)
                 )
         ),
         tabItem('batsman',
@@ -820,7 +821,7 @@ ui <- dashboardPage(header, sidebar, body, skin = 'red')
 
 ## server.R
 
-server <- function(input, output) {
+server <- function(input, output, session) {
     sever(html = sever_default(title = 'Disconnected!', 
                                subtitle = 'Your session ended.', 
                                button = 'Reload', button_class = 'info'),
@@ -828,12 +829,15 @@ server <- function(input, output) {
     
     waiter_hide()
 
-    output$about_image <- renderUI({
-        img(src = 'https://iplt20scores.com/wp-content/uploads/2020/01/IPL-logo-4.jpg',
-             width = '100%',
-             height = 'auto'
-             )
-    })
+    output$about_image <- renderImage({
+      width  <- session$clientData$output_about_image_width
+      height <- session$clientData$output_about_image_height
+      
+        list(src = 'IPL-logo-4.jpg',
+             width = width,
+             height = height
+             )},
+        deleteFile = FALSE)
     
 #### 1. Batsman
     
