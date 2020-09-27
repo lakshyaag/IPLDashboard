@@ -18,7 +18,7 @@ library(sever)
 
 options(spinner.type = 8)
 
-balls <- vroom('data.csv', delim = ',') %>% 
+balls <- vroom('data_updated.csv', delim = ',') %>% 
   mutate(date = dmy(date))
 
 ## Defining themes and colors
