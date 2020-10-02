@@ -363,7 +363,10 @@ get_wickets_by_batsman <- function(bowler_name) {
 #### 3.1. Strike Rate
 get_strike_rate_batsman_bowler <- function(batsman_name, bowler_name) {
     players_data <- balls %>%
-        filter(batsman == batsman_name & bowler == bowler_name) %>%
+        filter(batsman == batsman_name & bowler == bowler_name)
+    
+    if(nrow(players_data) != 0){
+      players_data <- players_data %>%
         select(season, over, ball, batsman_runs) %>%
         group_by(season) %>%
         summarise(batsman_runs = sum(batsman_runs), balls = length(ball)) %>%
@@ -383,12 +386,16 @@ get_strike_rate_batsman_bowler <- function(batsman_name, bowler_name) {
         config(displayModeBar = F)
     
     return(plot)
+    } else { return("") }
 }
 
 #### 3.2. Distribution of wickets
 get_wickets_batsman_bowler <- function(batsman_name, bowler_name) {
     players_data <- balls %>%
-        filter(batsman == batsman_name & bowler == bowler_name) %>%
+        filter(batsman == batsman_name & bowler == bowler_name)
+    
+    if(nrow(players_data) != 0) {
+      players_data <- players_data %>%
         select(season, dismissal_kind) %>%
         filter(!is.na(dismissal_kind)) %>%
         group_by(season, dismissal_kind) %>%
@@ -411,6 +418,7 @@ get_wickets_batsman_bowler <- function(batsman_name, bowler_name) {
         config(displayModeBar = F)
     
     return(plot)
+    } else { return("") }
 }
 
 ### 4. Season statistics
@@ -502,10 +510,12 @@ h2h_stats <- function(team_data) {
         group_by(winner) %>%
         summarise(count = n())
     
-    winner_count <- winner_count %>%
+    if(nrow(winner_count) != 0){
+      winner_count <- winner_count %>%
         add_row(winner = 'Total', count = sum(winner_count$count))
-    
-    return(winner_count)
+      
+      return(winner_count)
+    } else { return("") }
     
 }
 
@@ -673,7 +683,7 @@ body <- dashboardBody(
                         p('The IPL is the most-attended cricket league in the world and in 2014 ranked sixth by average attendance among all sports leagues.')
                     ),
                     box(title = 'Analytics Dashboard', width = 6, status = 'success', solidHeader = T,
-                        p('An interactive analytics dashboard for IPL which contains data from all seasons till 2019.'),
+                        p('An interactive analytics dashboard for IPL which contains data from all seasons, including the current 2020 season (with a 1 week delay).'),
                         p('You can analyze runs scored by season, dismissals, strike rates by player, toss statistics, season statistics and other insights. If you have any ideas, drop me a message.')
                     )
                 ),
@@ -862,7 +872,7 @@ server <- function(input, output, session) {
     
     output$fav_bowlers <- renderDataTable({get_favorite_bowlers(input$batsman_selected)},
                                               selection = 'none',
-                                              colnames = c('Venue', "Runs scored"),
+                                              colnames = c('Bowler', "Runs scored"),
                                               rownames = F,
                                               options = list(dom = 'tp'),
                                               style = 'bootstrap')
@@ -898,7 +908,7 @@ server <- function(input, output, session) {
     
     output$wickets_per_player <- renderDataTable({get_wickets_by_batsman(input$bowler_selected)},
                                                      selection = 'none',
-                                                     colnames = c('Venue', "Wickets taken"),
+                                                     colnames = c('Batsman', "Wickets taken"),
                                                      rownames = F,
                                                      options = list(dom = 'tp'),
                                                      style = 'bootstrap')
@@ -906,11 +916,19 @@ server <- function(input, output, session) {
 #### 3. Batsman vs. Bowler
     
     output$strike_rate_compare <- renderPlotly({
-        get_strike_rate_batsman_bowler(input$batsman_selected_compare, input$bowler_selected_compare)
+      validate(
+        need(get_strike_rate_batsman_bowler(input$batsman_selected_compare, input$bowler_selected_compare) != "", 
+             "Selected players did not play against each other")
+      )
+      get_strike_rate_batsman_bowler(input$batsman_selected_compare, input$bowler_selected_compare)
     })
     
     output$dist_wickets_compare <- renderPlotly({
-        get_wickets_batsman_bowler(input$batsman_selected_compare, input$bowler_selected_compare)
+      validate(
+        need(get_wickets_batsman_bowler(input$batsman_selected_compare, input$bowler_selected_compare) != "",
+             "Selected players did not play against each other")
+      )
+      get_wickets_batsman_bowler(input$batsman_selected_compare, input$bowler_selected_compare)
     })
     
 #### 4. Season statistics
@@ -992,6 +1010,9 @@ server <- function(input, output, session) {
     h2h_stats_data <- reactive({h2h_stats(team_head_to_head_data())})
     
     output$team1_wins <- renderValueBox({
+        validate(
+          need(h2h_stats_data() != "", "Selected teams did not play against each other")
+        )
         valueBox(
             paste0(h2h_stats_data() %>% filter(winner == input$team_1) %>% select(count)),
             paste0(input$team_1, ' Wins'),
@@ -1000,6 +1021,9 @@ server <- function(input, output, session) {
     })
     
     output$total_matches <- renderValueBox({
+        validate(
+          need(h2h_stats_data() != "", "Selected teams did not play against each other")
+        )
         valueBox(
             paste0(h2h_stats_data() %>% filter(winner == 'Total') %>% select(count)),
             paste0('Total matches'),
@@ -1009,6 +1033,9 @@ server <- function(input, output, session) {
     })
     
     output$team2_wins <- renderValueBox({
+        validate(
+          need(h2h_stats_data() != "", "Selected teams did not play against each other")
+        )
         valueBox(
             paste0(h2h_stats_data() %>% filter(winner == input$team_2) %>% select(count)),
             paste0(input$team_2, ' Wins'),
