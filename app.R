@@ -658,17 +658,25 @@ header <- dashboardHeader(
 sidebar <- dashboardSidebar(
     sidebarMenu(
         menuItem("About the dashboard", tabName = 'about', icon = icon('info')),
-        menuItem("Batsman", tabName = 'batsman', icon = icon('pen')), #1
-        menuItem("Bowlers", tabName = 'bowler', icon = icon('baseball-ball')), #2
-        menuItem("Batsman vs. Bowler", tabName = 'batsmanvsbowler', icon = icon('user-friends')), #3
-        menuItem("Top players", tabName = 'topplayers', icon = icon('medal')), #6
-        menuItem("Season statistics", tabName = 'season', icon = icon('calendar')), #4
-        menuItem("Head-to-head", tabName = 'headtohead', icon = icon('drum-steelpan')), #5
-        menuItem(""),
+        menuItem('All Seasons', tabName = 'overall_analysis', icon = icon('calculator'), startExpanded = TRUE,
+                 menuSubItem("Batsman", tabName = 'batsman', icon = icon('pen')), #1
+                 menuSubItem("Bowlers", tabName = 'bowler', icon = icon('baseball-ball')), #2
+                 menuSubItem("Batsman vs. Bowler", tabName = 'batsmanvsbowler', icon = icon('user-friends')), #3
+                 menuSubItem("Top players", tabName = 'topplayers', icon = icon('medal')), #6
+                 menuSubItem("Season statistics", tabName = 'season', icon = icon('calendar')), #4
+                 menuSubItem("Head-to-head", tabName = 'headtohead', icon = icon('drum-steelpan')) #5
+        ),
+        menuItem("2020 Season", tabName = "year_2020_tabs", icon = icon("stopwatch-20"),
+                 menuItem("Team performance", tabName = 'team_performance_2020', icon = icon('users'), 
+                          badgeLabel = "New", badgeColor = 'green'),
+                 menuItem("Venue statistics", tabName = 'venue_stats_2020', icon = icon('campground'),
+                          badgeLabel = "New", badgeColor = 'green')
+        ),
+        menuItem("Dream11 Calculator", tabName = 'dream11_calc', icon = icon('trophy'), badgeLabel = "New", badgeColor = 'red'),
         menuItem('Created by Lakshya Agarwal', href = 'https://github.com/lakshyaag/', newtab = T, 
                  icon = icon('magic')),
         menuItem('Check out the code!', href = 'https://github.com/lakshyaag/ipldashboard', newtab = T, 
-                 icon = icon('github'), badgeLabel = 'New', badgeColor = 'aqua')
+                 icon = icon('github'))
     )
 )
 
@@ -822,7 +830,10 @@ body <- dashboardBody(
                                     dataTableOutput('top_bowlers') %>% withSpinner())
                            )
                 )
-        )
+        ),
+        tabItem('team_performance_2020'),
+        tabItem('venue_stats_2020'),
+        tabItem('dream11_calc')
     ),
     waiter_show_on_load(html = spin_wobblebar(), color = '#546E7A')
 )

@@ -1,7 +1,7 @@
 
 # IPL Analytics Dashboard (v2)
 
-**A dashboard (Shiny web-app) for visualizing the [Indian Premier League (IPL)](http://www.iplt20.com/) over the past decade (2008-2019).**
+**A dashboard (Shiny web-app) for visualizing the [Indian Premier League (IPL)](http://www.iplt20.com/) over the past decade (2008-2020).**
 
 ## The dashboard is live [here.](https://lakshyaag.shinyapps.io/IPLDashboard/)
 [![forthebadge](https://forthebadge.com/images/badges/check-it-out.svg)](https://lakshyaag.shinyapps.io/IPLDashboard/)
@@ -19,6 +19,4 @@
 - [ ] Venue statistics
 
 ### Data
-Ball-by-ball data and match data has been taken from [Kaggle](https://www.kaggle.com/manasgarg/ipl) and preprocessed locally.
-
-#### [Version 1.0](https://github.com/lakshyaag/ipl_dashboard)
+Ball-by-ball data and match data has been taken from [Kaggle](https://www.kaggle.com/manasgarg/ipl) and [CricSheet](http://cricsheet.org/), preprocessed locally.
