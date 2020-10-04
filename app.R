@@ -21,6 +21,8 @@ options(spinner.type = 8)
 balls <- vroom('data_updated.csv', delim = ',') %>% 
   mutate(date = dmy(date))
 
+balls_2020 <- balls %>% filter(season == 2020) %>% mutate(stadium = str_c(venue, city, sep = ", "))
+
 ## Defining themes and colors
 
 theme_ipl <- function() {
@@ -47,6 +49,8 @@ bowler_list <- balls %>% select(bowler) %>% unique()
 
 teams <- balls %>% select(team1) %>% unique() %>% rename('team' = team1) %>% arrange(team)
 
+teams_2020 <- balls_2020 %>% select(batting_team) %>% unique() %>% rename('team' = batting_team) %>% arrange(team)
+stadiums_2020 <- balls_2020 %>% select(stadium) %>% unique() %>% rename('stadium' = stadium) %>% arrange(stadium)
 
 ## Plotting functions start here
 
@@ -648,6 +652,245 @@ get_top_bowlers <- function(){
     
 }
 
+## 2020 Season
+
+### 1. Team performance
+
+#### 1.1 Team Batting
+
+get_team_data <- function(team_name) {
+  team_data <- balls_2020 %>%
+    filter(team1 == team_name | team2 == team_name)
+  return(team_data)
+}
+
+get_team_batting_stats <- function(team_name, team_data) {
+  team_batting <- team_data %>%
+    filter(batting_team == team_name) %>%
+    group_by(bowling_team) %>%
+    summarise(runs = sum(total_runs), 
+              winner = first(winner),
+              inning = as.character(mean(inning))) %>%
+    mutate(type_of_innings = case_when(inning == "1" ~ "Score defend",
+                                       inning == "2" ~ "Run chase", 
+                                       TRUE ~ inning)) %>%
+    mutate(is_win = case_when((winner == team_name) ~ "Won",
+                              TRUE ~ "Lost"))
+  
+  team_batting_plot <- team_batting %>%
+    ggplot(aes(x = as.factor(bowling_team), y = runs, fill = bowling_team, text = paste0('Against: ', bowling_team, 
+                                                                                         '\nType of innings: ', type_of_innings,
+                                                                                         '\nRuns scored: ', runs,
+                                                                                         '\nDid ', team_name, ' win?: ', is_win))) +
+    geom_col() +
+    scale_fill_manual(values = team_colors) +
+    scale_y_continuous(breaks = pretty_breaks(n = 5)) +
+    labs(x = '', y = 'Runs scored') +
+    theme_ipl() +
+    theme(legend.position = 'none',
+          strip.text = element_text(size = 10, face = 'bold'),
+          panel.border = element_rect(size = 1, fill = NA),
+          panel.background = element_rect(color = "#CCCCCC")) +
+    facet_grid(is_win ~ type_of_innings, scales = 'free_x') +
+    coord_flip()
+  
+  plot <- ggplotly(team_batting_plot, tooltip = 'text') %>%
+    layout(autosize = T, dragmode = 'zoom') %>%
+    config(displayModeBar = F)
+  
+  return(plot)
+}
+
+#### 1.2 Team bowling
+get_team_bowling_stats <- function(team_name, team_data) {
+  team_bowling <- team_data %>%
+    filter(bowling_team == team_name) %>%
+    group_by(batting_team) %>%
+    summarise(wickets = sum(!is.na(player_dismissed)),
+              winner = first(winner),
+              inning = as.character(mean(inning))) %>%
+    mutate(type_of_innings = case_when(inning == "1" ~ "Run chase",
+                                       inning == "2" ~ "Score defend", 
+                                       TRUE ~ inning)) %>%
+    mutate(is_win = case_when((winner == team_name) ~ "Won",
+                              TRUE ~ "Lost"))
+  
+  team_bowling_plot <- team_bowling %>%
+    ggplot(aes(x = as.factor(batting_team), y = wickets, fill = batting_team, text = paste0('Against: ', batting_team, 
+                                                                                            '\nType of innings: ', type_of_innings,
+                                                                                            '\nWickets Taken: ', wickets,
+                                                                                            '\nDid ', team_name, ' win?: ', is_win))) +
+    geom_col() +
+    scale_fill_manual(values = team_colors) +
+    scale_y_continuous(breaks = pretty_breaks(n = 10)) +
+    labs(x = '', y = 'Wickets taken') +
+    theme_ipl() +
+    theme(legend.position = 'none',
+          strip.text = element_text(size = 10, face = 'bold'),
+          panel.border = element_rect(size = 1, fill = NA),
+          panel.background = element_rect(color = "#CCCCCC")) +
+    facet_grid(is_win ~ type_of_innings, scales = 'free_y') +
+    coord_flip()
+  
+  plot <- ggplotly(team_bowling_plot, tooltip = 'text') %>%
+    layout(autosize = T, dragmode = 'zoom') %>%
+    config(displayModeBar = F)
+  
+  return(plot)
+}
+
+#### 1.3 Team fielding
+get_team_fielding_stats <- function(team_name, team_data) {
+  team_fielding <- team_data %>%
+    filter(bowling_team == team_name) %>%
+    group_by(batting_team, dismissal_kind) %>%
+    count(dismissal_kind) %>%
+    filter(!is.na(dismissal_kind)) %>%
+    mutate(dismissal_kind = toupper(dismissal_kind))
+  
+  team_fielding_plot <- team_fielding %>%
+    ggplot(aes(x = batting_team, y = n, fill = dismissal_kind, text = paste0('Against: ', batting_team, 
+                                                                             '\nType of wicket: ', dismissal_kind,
+                                                                             '\nHow many: ', n))) +
+    geom_col() +
+    scale_fill_ptol() +
+    scale_y_continuous(breaks = pretty_breaks(n = 10)) +
+    labs(x = '', y = 'Wickets taken', fill = 'Type of wicket') +
+    theme_ipl() +
+    theme(legend.position = 'right',
+          strip.text = element_text(size = 11, face = 'bold'),
+          panel.border = element_rect(size = 1, fill = NA),
+          axis.text.x = element_blank(),
+          axis.ticks.x = element_blank()) +
+    facet_wrap(~batting_team, nrow = 1, scales = 'free_x')
+  
+  plot <- ggplotly(team_fielding_plot, tooltip = 'text') %>%
+    layout(autosize = T, dragmode = 'zoom') %>%
+    config(displayModeBar = F)
+  
+  return(plot)
+}
+
+#### 1.4 Team player performance
+get_team_player_performance <- function(team_name, team_data) {
+  team_player_batting <- team_data %>%
+    filter(batting_team == team_name) %>%
+    group_by(batsman) %>%
+    summarise(runs = sum(batsman_runs),
+              fours = sum(batsman_runs == 4),
+              sixes = sum(batsman_runs == 6))
+  
+  team_player_bowling <- team_data %>%
+    filter(bowling_team == team_name) %>%
+    group_by(bowler) %>%
+    summarise(extra_runs = sum(extra_runs),
+              wickets = sum(!is.na(player_dismissed)))
+  
+  team_player_performance <- team_player_batting %>%
+    full_join(team_player_bowling, by = c('batsman' = 'bowler')) %>%
+    mutate(across(everything(), ~replace_na(.x, 0))) %>%
+    relocate(5, .after = wickets) %>%
+    rename('Player' = 1, 'Runs scored' = 2, '4s' = 3, '6s' = 4, 'Wickets taken' = 5, 'Extra runs conceded' = 6)
+  
+  return(team_player_performance)
+  
+}
+
+
+### 2. Venue Statistics
+get_venue_stats <- function(stadium_name) {
+  stadium_data <- balls_2020 %>%
+    filter(stadium == stadium_name)
+  
+  return(stadium_data)
+}
+
+
+#### 2.1 Runs scored 
+get_runs_scored_stadium <- function(stadium_data) {
+  runs_scored <- stadium_data %>%
+    group_by(inning, batting_team) %>%
+    summarise(runs = sum(total_runs))
+  
+  avg_runs <- runs_scored %>%
+    group_by(inning) %>%
+    summarise(avg_runs = mean(runs))
+  
+  runs_scored <- runs_scored %>%
+    full_join(avg_runs) %>%
+    mutate(inning = as.character(inning)) %>%
+    mutate(inning_name = case_when(inning == '1' ~ "First innings",
+                                   inning == '2' ~ "Second innings",
+                                   TRUE ~ inning))
+  
+  runs_scored_plot <- runs_scored %>%
+    ggplot(aes(x = batting_team, y = runs, fill = batting_team, text = paste0('Batting team: ', batting_team,
+                                                                              '\nRuns scored: ', runs,
+                                                                              '\nInnings :', inning_name))) +
+    geom_col() +
+    geom_hline(aes(yintercept = avg_runs), linetype = 2) +
+    scale_y_continuous(breaks = pretty_breaks(5)) +
+    labs(x = '', y = 'Runs Scored') +
+    scale_fill_manual(values = team_colors) +
+    theme_ipl() +
+    theme(strip.text = element_text(size = 11, face = 'bold')) +
+    facet_wrap(~inning_name, scale = 'free', ncol = 1)
+  
+  return(get_plotly(runs_scored_plot))
+  
+}
+
+#### 2.2 Wickets taken
+get_wickets_taken_stadium <- function(stadium_data) {
+  wickets_taken <- stadium_data %>%
+    group_by(inning, bowling_team) %>%
+    summarise(wickets = sum(!is.na(player_dismissed))) %>%
+    mutate(inning = as.character(inning)) %>%
+    mutate(inning_name = case_when(inning == '1' ~ "First innings",
+                                   inning == '2' ~ "Second innings",
+                                   TRUE ~ inning))
+  
+  wickets_taken_plot <- wickets_taken %>%
+    ggplot(aes(x = bowling_team, y = wickets, fill = bowling_team, text = paste0('Bowling team: ', bowling_team,
+                                                                                 '\nWickets taken: ', wickets,
+                                                                                 '\nInnings :', inning_name))) +
+    geom_col() +
+    scale_y_continuous(breaks = pretty_breaks(5)) +
+    labs(x = '', y = 'Wickets taken') +
+    scale_fill_manual(values = team_colors) +
+    theme_ipl() +
+    theme(strip.text = element_text(size = 11, face = 'bold')) +
+    facet_wrap(~inning_name, scale = 'free_y', ncol = 1) +
+    coord_flip()
+  
+  return(get_plotly(wickets_taken_plot))
+  
+}
+
+#### 2.3 Boundary
+get_boundary_stadium <- function(stadium_data) {
+  boundaries_venue <- stadium_data %>%
+    group_by(batting_team) %>%
+    summarise(fours = sum(batsman_runs == 4),
+              sixes = sum(batsman_runs == 6)) %>%
+    rename('4s' = fours, '6s' = sixes) %>%
+    pivot_longer(names_to = 'boundary_type', cols = c('4s', '6s'), values_to = 'n')
+  
+  boundaries_venue_plot <- boundaries_venue %>%
+    ggplot(aes(x = batting_team, y = n, fill = boundary_type, text = paste0('Batting team: ', batting_team,
+                                                                            '\nNumber of ', boundary_type, ' scored: ', n))) +
+    geom_col(position = 'fill') +
+    scale_y_continuous(labels = label_percent()) +
+    labs(x = '', y = '% of boundaries', fill = 'Boundary type') +
+    scale_fill_fivethirtyeight() +
+    theme_ipl() +
+    theme(legend.position = 'top',
+          axis.text.x = element_text(size = 11))
+  
+  return(get_plotly(boundaries_venue_plot))
+  
+}
+
 
 ## ui.R
 
@@ -831,8 +1074,46 @@ body <- dashboardBody(
                            )
                 )
         ),
-        tabItem('team_performance_2020'),
-        tabItem('venue_stats_2020'),
+        tabItem('team_performance_2020',
+                fluidRow(
+                  box(width = 12, status = 'success',
+                      selectInput('team_2020_selected', 'Choose team',
+                                  choices = teams_2020, selected = 'Mumbai Indians')
+                  )
+                ),
+                
+                fluidRow(
+                  tabBox(width = 12,
+                         tabPanel("Batting performance",
+                                  plotlyOutput('team_batting_2020') %>% withSpinner()),
+                         tabPanel("Bowling performance",
+                                  plotlyOutput('team_bowling_2020') %>% withSpinner()),
+                         tabPanel("Fielding performance",
+                                  plotlyOutput('team_fielding_2020') %>% withSpinner()),
+                         tabPanel('Player performance',
+                                  dataTableOutput('team_player_2020') %>% withSpinner())
+                         )
+                  )
+        ),
+        tabItem('venue_stats_2020',
+                fluidRow(
+                  box(width = 12, status = 'success',
+                      selectInput('venue_2020_selected', 'Choose venue',
+                                  choices = stadiums_2020, selected = 'Sharjah Cricket Stadium, Sharjah')
+                  )
+                ),
+                
+                fluidRow(
+                  tabBox(width = 12,
+                         tabPanel("Batting performance",
+                                  plotlyOutput('venue_batting_2020', height = '800px') %>% withSpinner()),
+                         tabPanel("Bowling performance",
+                                  plotlyOutput('venue_bowling_2020', height = '800px') %>% withSpinner()),
+                         tabPanel("Boundary statistics",
+                                  plotlyOutput('venue_boundary_2020') %>% withSpinner())
+                  )
+                )
+        ),
         tabItem('dream11_calc')
     ),
     waiter_show_on_load(html = spin_wobblebar(), color = '#546E7A')
@@ -1084,6 +1365,43 @@ server <- function(input, output, session) {
                                           options = list(dom = 'tp'),
                                           style = 'bootstrap')
     
+#### 1. Team performance
+    
+    team_data <- reactive({get_team_data(input$team_2020_selected)})
+    
+    output$team_batting_2020 <- renderPlotly({
+      get_team_batting_stats(input$team_2020_selected, team_data())
+    })
+    
+    output$team_bowling_2020 <- renderPlotly({
+      get_team_bowling_stats(input$team_2020_selected, team_data())
+    })
+    
+    output$team_fielding_2020 <- renderPlotly({
+      get_team_fielding_stats(input$team_2020_selected, team_data())
+    })
+    
+    output$team_player_2020 <- renderDataTable({get_team_player_performance(input$team_2020_selected, team_data())},
+                                               selection = 'none',
+                                               rownames = F,
+                                               options = list(dom = 'tp', order = list(list(1, 'desc'))),
+                                               style = 'bootstrap')
+    
+#### 2. Venue statistics
+    
+    stadium_data <- reactive({get_venue_stats(input$venue_2020_selected)})
+    
+    output$venue_batting_2020 <- renderPlotly({
+      get_runs_scored_stadium(stadium_data())
+    })
+    
+    output$venue_bowling_2020 <- renderPlotly({
+      get_wickets_taken_stadium(stadium_data())
+    })
+    
+    output$venue_boundary_2020 <- renderPlotly({
+      get_boundary_stadium(stadium_data())
+    })
 }
 
 shinyApp(ui = ui, server = server)
