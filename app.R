@@ -52,7 +52,138 @@ teams <- balls %>% select(team1) %>% unique() %>% rename('team' = team1) %>% arr
 teams_2020 <- balls_2020 %>% select(batting_team) %>% unique() %>% rename('team' = batting_team) %>% arrange(team)
 stadiums_2020 <- balls_2020 %>% select(stadium) %>% unique() %>% rename('stadium' = stadium) %>% arrange(stadium)
 
-## Plotting functions start here
+get_plotly <- function(plot) {
+  plotly_plot <- ggplotly(plot, tooltip = 'text') %>%
+    layout(autosize = T, dragmode = 'zoom') %>%
+    config(displayModeBar = F)
+  
+  return(plotly_plot)
+}
+
+## ---------------------- Code for Dream11 calculator -----------------------
+
+player_list_today_bat <- function(team_name) {
+  bat_list <- team_today %>%
+    filter(batting_team == team_name) %>%
+    select(batting_team, batsman, non_striker) %>%
+    pivot_longer(cols = c(batsman, non_striker)) %>%
+    select(batting_team, value) %>%
+    unique() %>%
+    rename('team' = 1, 'player' = 2)
+  
+  return(bat_list)
+}
+
+player_list_today_bowl <- function(team_name) {
+  bowl_list <- team_today %>% 
+    filter(bowling_team == team_name) %>% 
+    select(bowling_team, bowler) %>% 
+    unique() %>%
+    rename('team' = 1, 'player' = 2)
+  
+  return(bowl_list)
+}
+
+player_list <- function(team_name) {
+  p_list <- player_list_today_bat(team_name) %>%
+    rbind(player_list_today_bowl(team_name)) %>%
+    unique()
+  
+  return(p_list)
+}
+
+d11_batsman_data <- function(batsman_name) {
+  total_runs <- balls_2020 %>%
+    filter(batsman == batsman_name) %>%
+    group_by(batsman) %>%
+    summarise(fours = sum(batsman_runs == 4),
+              sixes = sum(batsman_runs == 6),
+              batsman_runs = sum(batsman_runs)) %>%
+    select(-batsman)
+  
+  return(total_runs)
+}
+
+d11_bowler_data_wickets <- function(bowler_name) {
+  wicket_taken <- balls_2020 %>%
+    filter(bowler == bowler_name) %>%
+    select(bowler, dismissal_kind) %>%
+    filter(dismissal_kind != 'run out') %>%
+    group_by(bowler) %>%
+    summarise(wickets = sum(!is.na(dismissal_kind)))
+  
+  return(wicket_taken)
+}
+
+d11_bowler_data_econonmy <- function(bowler_name) {
+  econ_rate <- balls_2020 %>%
+    filter(bowler == bowler_name) %>%
+    select(bowler, over, ball, total_runs) %>%
+    group_by(bowler) %>%
+    summarise(total_runs = sum(total_runs), overs_bowled = length(ball)/6) %>%
+    mutate(economy_rate = total_runs / overs_bowled) %>%
+    select(economy_rate)
+  
+  return(econ_rate)
+}
+
+d11_bowler_data <- function(bowler_name) {
+  wkts <- d11_bowler_data_wickets(bowler_name)
+  econ_rate <- d11_bowler_data_econonmy(bowler_name)
+  
+  
+  if(nrow(wkts) == 0) {
+    return(
+      econ_rate %>%
+        mutate(wickets = 0, .before = economy_rate)
+    )
+  } else { return(wkts %>% cbind(econ_rate) %>% select(-bowler)) }
+}
+
+d11_player_data <- function(player) {
+  batting <- d11_batsman_data(player)
+  bowling <- d11_bowler_data(player)
+  
+  if(nrow(bowling) == 0) {
+    return(batting %>% mutate(wickets = 0, economy_rate = 0))
+  } else if(nrow(batting) == 0) {
+    return(bowling %>% mutate(batsman_runs = 0, fours = 0, sixes = 0, .before = wickets))
+  } else { return(batting %>% cbind(bowling))
+  }
+}
+
+team_points_d11 <- function(team_name) {
+  pts_team <- player_list(team_name) %>%
+    mutate(p_stats = map(.x = player, .f = d11_player_data)) %>%
+    unnest(p_stats) %>%
+    mutate(
+      runs_points = batsman_runs * 1,
+      fours_points = fours * 1,
+      sixes_points = sixes * 2,
+      wickets_points = wickets * 25,
+      econ_points = case_when((economy_rate > 0 & economy_rate <= 4) ~ 6,
+                              (economy_rate > 4 & economy_rate <=5) ~ 4,
+                              (economy_rate > 5 & economy_rate <=6) ~ 2,
+                              (economy_rate > 9 & economy_rate <=10) ~ -2,
+                              (economy_rate > 10 & economy_rate <=11) ~ -4,
+                              (economy_rate > 11) ~ -6,
+                              TRUE ~ 0)
+    ) %>%
+    rowwise(player) %>%
+    mutate(total_points = sum(across(ends_with('points'))), 
+           batting_points = sum(runs_points, fours_points, sixes_points),
+           bowling_points = sum(wickets_points, econ_points),
+           .after = player) %>%
+    ungroup()
+  
+  return(pts_team)
+}
+
+match_points_d11 <- function(team1_name, team2_name) {  
+  return(rbind(team_points_d11(team1_name), team_points_d11(team2_name)) %>% select(1:5))
+}
+
+## Plotting functions start here -----------
 
 ### 1. Batsman
 #### 1.1. Runs per season 
@@ -652,7 +783,7 @@ get_top_bowlers <- function(){
     
 }
 
-## 2020 Season
+## 2020 Season -----------
 
 ### 1. Team performance
 
@@ -892,7 +1023,7 @@ get_boundary_stadium <- function(stadium_data) {
 }
 
 
-## ui.R
+## ui.R -----
 
 header <- dashboardHeader(
     title = 'IPL Dashboard'
@@ -1114,14 +1245,43 @@ body <- dashboardBody(
                   )
                 )
         ),
-        tabItem('dream11_calc')
+        tabItem('dream11_calc',
+                fluidRow(
+                  box(width = 12, status = 'success',
+                      column(6,
+                             selectInput('d11_team_1', 'Choose a team',
+                                         choices = teams_2020, selected = 'Chennai Super Kings')
+                      ),
+                      column(6,
+                             selectInput('d11_team_2', 'Choose a team',
+                                         choices = teams_2020, selected = 'Mumbai Indians')
+                      )
+                  )
+                ),
+                fluidRow(
+                  tabBox(width = 12,
+                         tabPanel("Points table",
+                                  dataTableOutput('d11_team') %>% withSpinner()),
+                         tabPanel('Player selection',
+                                  lapply(1:11, function(i) {
+                                    fluidRow(
+                                      column(4, selectInput(paste0('d11_player_', i), paste0('Player ', i), choices = NULL)),
+                                      column(2, numericInput(paste0('d11_player_runs_', i), paste0('Player ', i, ' Runs'), value = 0)),
+                                      column(2, numericInput(paste0('d11_player_wickets_', i), paste0('Player ', i, ' Wickets'), value = 0, max = 10)),
+                                      column(4, tableOutput(paste0('d11_player_pts_', i)))
+                                    )
+                                  })
+                         )
+                  )
+                )
+        )
     ),
     waiter_show_on_load(html = spin_wobblebar(), color = '#546E7A')
 )
 
 ui <- dashboardPage(header, sidebar, body, skin = 'red')
 
-## server.R
+## server.R ---------
 
 server <- function(input, output, session) {
     sever(html = sever_default(title = 'Disconnected!', 
@@ -1364,7 +1524,8 @@ server <- function(input, output, session) {
                                           rownames = F,
                                           options = list(dom = 'tp'),
                                           style = 'bootstrap')
-    
+### 2020 Server --------
+        
 #### 1. Team performance
     
     team_data <- reactive({get_team_data(input$team_2020_selected)})
@@ -1402,6 +1563,34 @@ server <- function(input, output, session) {
     output$venue_boundary_2020 <- renderPlotly({
       get_boundary_stadium(stadium_data())
     })
+    
+#### 3. D11 Code
+    
+    team_today <- reactive({balls_2020 %>%
+        filter(team1 %in% c(input$d11_team_1, input$d11_team_2) | team2 %in% c(input$d11_team_1, input$d11_team_2))})
+    
+    player_list_selected <- reactive({match_points_d11(input$d11_team_1, input$d11_team_2) %>% select(player) %>% arrange(player)})
+    
+    output$d11_team <- renderDataTable({match_points_d11(input$d11_team_1, input$d11_team_2)},
+                                       selection = 'none',
+                                       rownames = F,
+                                       colnames = c("Team", "Player", "Total points", "Batting points", "Bowling points"),
+                                       options = list(dom = 'tp', order = list(list(2, 'desc'))),
+                                       style = 'bootstrap')
+    
+    lapply(1:11, function(i) {
+      observe({updateSelectInput(session, paste0('d11_player_', i), choices = player_list_selected())})
+    })
+    
+    lapply(1:11, function(i) {
+      
+      output[[paste0('d11_player_pts_', i)]] <- renderTable({
+        data.frame("Points" = 
+                     (input[[paste0('d11_player_runs_', i)]] * 1) + (input[[paste0('d11_player_wickets_', i)]] * 25))},
+        align = 'c', hover = T, width = 'auto')
+    })
+    
+    
 }
 
 shinyApp(ui = ui, server = server)
