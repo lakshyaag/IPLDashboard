@@ -61,6 +61,9 @@ get_plotly <- function(plot) {
 }
 
 ## ---------------------- Code for Dream11 calculator -----------------------
+team_today <- balls_2020 %>%
+  filter(team1 %in% c('Chennai Super Kings', 'Mumbai Indians'))
+
 
 player_list_today_bat <- function(team_name) {
   bat_list <- team_today %>%
