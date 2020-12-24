@@ -1,0 +1,55 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r include = F}
+library(tidyverse)
+library(reshape2)
+library(yaml)
+library(janitor)
+```
+
+```{r}
+data <- yaml.load_file('1216492.yaml')
+i = 7
+```
+
+```{r}
+get_match_deliveries <- function(data, i) {
+  data_innings <- melt(data$innings) %>%
+    filter(L6 != 'replacements' | is.na(L6) ) %>%
+    remove_empty("cols") %>%
+    mutate(L7 = str_replace_na(L7, ""),
+           col_head = str_c(L6, L7, sep = ""), .after = value) %>%
+    select(-L7, -L6) %>%
+    mutate(col_head = case_when(L1 == 1 ~ str_replace_na(col_head, "batting_team_1"),
+                                L1 == 2 ~ str_replace_na(col_head, "batting_team_2"))) %>%
+    filter(!is.na(col_head)) %>%
+    pivot_wider(names_from = col_head, values_from = value) %>%
+    rename('inning' = L1) %>%
+    separate(L5, c('over', 'ball')) %>%
+    select(-L4, -L3, -L2, -starts_with("extras")) %>%
+    mutate(over = as.double(over) + 1,
+           ball = as.double(ball)) %>%
+    mutate(batting_team = case_when(inning == 1 ~ batting_team_1,
+                                    inning == 2 ~ batting_team_2), .after = inning) %>%
+    fill(batting_team, .direction = 'down') %>%
+    fill(batting_team_1, .direction = 'down') %>%
+    fill(batting_team_2, .direction = 'updown') %>%
+    filter(!is.na(over)) %>%
+    mutate(bowling_team = if_else(inning == 1, batting_team_2, batting_team_1)) %>%
+    select(-batting_team_1, -batting_team_2, -wicketfielders) %>%
+    rename("extra_runs" = 7, "total_runs" = 8, "batsman_runs" = 9, "player_dismissed" = 11, "dismissal_kind" = 12) %>%
+    select(inning, batting_team, bowling_team, over, ball, batsman, non_striker, bowler, 
+           batsman_runs, extra_runs, total_runs, player_dismissed, dismissal_kind) %>%
+    mutate(match_id = i, .before = inning)
+  
+  return(data_innings)
+}
+```
+
+```{r}
+get_match_deliveries(data, i)
+```
+
