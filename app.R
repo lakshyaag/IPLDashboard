@@ -10,6 +10,7 @@ library(scales)
 
 library(shiny)
 library(shinydashboard)
+library(dashboardthemes)
 library(shinycssloaders)
 library(DT)
 
@@ -1035,21 +1036,14 @@ header <- dashboardHeader(
 sidebar <- dashboardSidebar(
     sidebarMenu(
         menuItem("About the dashboard", tabName = 'about', icon = icon('info')),
-        menuItem('All Seasons', tabName = 'overall_analysis', icon = icon('calculator'), startExpanded = TRUE,
-                 menuSubItem("Batsman", tabName = 'batsman', icon = icon('pen')), #1
-                 menuSubItem("Bowlers", tabName = 'bowler', icon = icon('baseball-ball')), #2
-                 menuSubItem("Batsman vs. Bowler", tabName = 'batsmanvsbowler', icon = icon('user-friends')), #3
-                 menuSubItem("Top players", tabName = 'topplayers', icon = icon('medal')), #6
-                 menuSubItem("Season statistics", tabName = 'season', icon = icon('calendar')), #4
-                 menuSubItem("Head-to-head", tabName = 'headtohead', icon = icon('drum-steelpan')) #5
+        menuItem('View by', tabName = 'overall_analysis', icon = icon('calculator'), startExpanded = TRUE,
+                 menuItem("Batsman", tabName = 'batsman', icon = icon('pen')), #1
+                 menuItem("Bowlers", tabName = 'bowler', icon = icon('baseball-ball')), #2
+                 menuItem("Batsman vs. Bowler", tabName = 'batsmanvsbowler', icon = icon('user-friends')), #3
+                 menuItem("Top players", tabName = 'topplayers', icon = icon('medal')), #6
+                 menuItem("Season statistics", tabName = 'season', icon = icon('calendar')), #4
+                 menuItem("Head-to-head", tabName = 'headtohead', icon = icon('drum-steelpan')) #5
         ),
-        menuItem("2020 Season", tabName = "year_2020_tabs", icon = icon("stopwatch-20"),
-                 menuItem("Team performance", tabName = 'team_performance_2020', icon = icon('users'), 
-                          badgeLabel = "New", badgeColor = 'green'),
-                 menuItem("Venue statistics", tabName = 'venue_stats_2020', icon = icon('campground'),
-                          badgeLabel = "New", badgeColor = 'green')
-        ),
-        menuItem("Dream11 Calculator", tabName = 'dream11_calc', icon = icon('trophy'), badgeLabel = "New", badgeColor = 'red'),
         menuItem('Created by Lakshya Agarwal', href = 'https://github.com/lakshyaag/', newtab = T, 
                  icon = icon('magic')),
         menuItem('Check out the code!', href = 'https://github.com/lakshyaag/ipldashboard', newtab = T, 
@@ -1058,6 +1052,9 @@ sidebar <- dashboardSidebar(
 )
 
 body <- dashboardBody(
+    shinyDashboardThemes(
+      theme = 'poor_mans_flatly'
+    ),
     use_sever(),
     use_waiter(), 
     tabItems(
@@ -1067,7 +1064,7 @@ body <- dashboardBody(
                         p('The Indian Premier League is a professional Twenty20 cricket league in India contested during March-May of every year by eight teams representing eight different cities in India.'),
                         p('The IPL is the most-attended cricket league in the world and in 2014 ranked sixth by average attendance among all sports leagues.')
                     ),
-                    box(title = 'Analytics Dashboard', width = 6, status = 'success', solidHeader = T,
+                    box(title = 'Analytics Dashboard', width = 6, status = 'warning', solidHeader = T,
                         p('An interactive analytics dashboard for IPL which contains data from all seasons, including the current 2020 season (with a 1 week delay).'),
                         p('You can analyze runs scored by season, dismissals, strike rates by player, toss statistics, season statistics and other insights. If you have any ideas, drop me a message.')
                     )
@@ -1080,7 +1077,7 @@ body <- dashboardBody(
                 fluidRow(
                     box(width = 12, status = 'success',
                         selectInput('batsman_selected', 'Choose batsman',
-                                       choices = batsman_list, selected = 'V Kohli')
+                                       choices = batsman_list, selected = 'RG Sharma')
                         )
                 ),
                 
@@ -1152,7 +1149,7 @@ body <- dashboardBody(
                 fluidRow(
                     box(width = 2, status = 'success',
                         selectInput('season_selected', 'Select season',
-                                    choices = seq(2008, 2019, 1), selected = 2019)
+                                    choices = seq(2008, 2020, 1), selected = 2020)
                     ),
                     
                     box(width = 10, status = 'primary', title = 'Season statistics',
@@ -1279,10 +1276,10 @@ body <- dashboardBody(
                 )
         )
     ),
-    waiter_show_on_load(html = spin_wobblebar(), color = '#546E7A')
+    waiter_show_on_load(html = spin_wobblebar(), color = '#8bc9b4')
 )
 
-ui <- dashboardPage(header, sidebar, body, skin = 'red')
+ui <- dashboardPage(header, sidebar, body)
 
 ## server.R ---------
 
@@ -1290,7 +1287,7 @@ server <- function(input, output, session) {
     sever(html = sever_default(title = 'Disconnected!', 
                                subtitle = 'Your session ended.', 
                                button = 'Reload', button_class = 'info'),
-          color = 'white', bg_color = '#546E7A')
+          color = 'white', bg_color = '#8bc9b4')
     
     waiter_hide()
 
@@ -1298,7 +1295,7 @@ server <- function(input, output, session) {
       width  <- session$clientData$output_about_image_width
       height <- session$clientData$output_about_image_height
       
-        list(src = 'IPL-logo-4.jpg',
+        list(src = 'NEW_Banner.jpg',
              width = width,
              height = height
              )},
