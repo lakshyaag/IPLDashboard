@@ -748,14 +748,16 @@ get_venue_wins <- function(team_data, team_1, team_2) {
 ### 6. Top batsmen/bowlers
 
 #### 6.1. Top batsmen
-get_top_batsmen <- function(){
+get_top_batsmen <- function(start_year, end_year){
     batsman_data <- balls %>%
         group_by(batsman) %>%
         filter(extra_runs == 0) %>%
+        filter(season >= start_year & season <= end_year) %>%
         summarise(runs = sum(batsman_runs), balls = length(ball), strike_rate = round(runs / balls * 100, 2),
                   sixes = sum(batsman_runs == 6), fours = sum(batsman_runs == 4))
     
     highest_score <- balls %>%
+        filter(season >= start_year & season <= end_year) %>%
         group_by(batsman ,match_id) %>%
         summarise(runs = sum(batsman_runs)) %>%
         mutate(high_score = max(runs)) %>%
@@ -764,16 +766,18 @@ get_top_batsmen <- function(){
     
     batsman_data <- batsman_data %>%
         left_join(highest_score, by = 'batsman') %>%
-        arrange(desc(runs))
+        arrange(desc(runs)) %>%
+        filter(runs >= 10)
     
     return(batsman_data)
 }
 
 
 #### 6.2. Top bowlers
-get_top_bowlers <- function(){
+get_top_bowlers <- function(start_year, end_year){
     bowler_data <- balls %>%
         group_by(bowler) %>%
+        filter(season >= start_year & season <= end_year) %>%
         summarise(runs = sum(total_runs), balls = length(ball), 
                   wickets = sum(!is.na(dismissal_kind) & !dismissal_kind == 'run out'),
                   strike_rate = round(balls / wickets, 2),
@@ -786,6 +790,34 @@ get_top_bowlers <- function(){
     return(top_bowlers)
     
 }
+
+### 7 Team performance
+
+#### 7.1 Team batting performance
+get_team_batting_performance <- function(team, start_year, end_year){
+  team_batting_performance <- balls %>%
+    filter(season >= start_year & season <= end_year) %>%
+    filter(batting_team == team) %>%
+    distinct(batsman) %>%
+    left_join(get_top_batsmen(start_year, end_year), by = 'batsman') %>%
+    arrange(desc(runs))
+  
+  return(team_batting_performance)
+}
+
+
+#### 7.2 Team bowling performance
+get_team_bowling_performance <- function(team, start_year, end_year){
+  team_bowling_performance <- balls %>%
+    filter(season >= start_year & season <= end_year) %>%
+    filter(bowling_team == team) %>%
+    distinct(bowler) %>%
+    left_join(get_top_bowlers(start_year, end_year), by = 'bowler') %>%
+    arrange(desc(wickets))
+  
+  return(team_bowling_performance)
+}
+
 
 ## 2020 Season -----------
 
@@ -1040,9 +1072,11 @@ sidebar <- dashboardSidebar(
                  menuItem("Batsman", tabName = 'batsman', icon = icon('pen')), #1
                  menuItem("Bowlers", tabName = 'bowler', icon = icon('baseball-ball')), #2
                  menuItem("Batsman vs. Bowler", tabName = 'batsmanvsbowler', icon = icon('user-friends')), #3
+                 menuItem("Team performance", tabName = 'teamperformance', icon = icon('sitemap')), #7
                  menuItem("Top players", tabName = 'topplayers', icon = icon('medal')), #6
                  menuItem("Season statistics", tabName = 'season', icon = icon('calendar')), #4
                  menuItem("Head-to-head", tabName = 'headtohead', icon = icon('drum-steelpan')) #5
+
         ),
         menuItem('Created by Lakshya Agarwal', href = 'https://github.com/lakshyaag/', newtab = T, 
                  icon = icon('magic')),
@@ -1065,7 +1099,7 @@ body <- dashboardBody(
                         p('The IPL is the most-attended cricket league in the world and in 2014 ranked sixth by average attendance among all sports leagues.')
                     ),
                     box(title = 'Analytics Dashboard', width = 6, status = 'warning', solidHeader = T,
-                        p('An interactive analytics dashboard for IPL which contains data from all seasons, including the current 2020 season (with a 1 week delay).'),
+                        p('An interactive analytics dashboard for IPL which contains data from all seasons, including the latest 2020 season.'),
                         p('You can analyze runs scored by season, dismissals, strike rates by player, toss statistics, season statistics and other insights. If you have any ideas, drop me a message.')
                     )
                 ),
@@ -1197,12 +1231,45 @@ body <- dashboardBody(
         ),
         tabItem('topplayers',
                 fluidRow(
+                  box(width = 12, status = 'success',
+                      column(12,
+                             sliderInput('top_player_year_input', 'Choose time period',
+                                         min = 2008, max = 2020, value = c(2008, 2020),
+                                         sep = "")
+                      )
+                  )
+                ),
+                fluidRow(
                     tabBox(width = 12,
                            tabPanel('Top batsmen',
+                                    textOutput('slider_output'),
                                     dataTableOutput('top_batsmen') %>% withSpinner()),
                            tabPanel('Top bowlers',
                                     dataTableOutput('top_bowlers') %>% withSpinner())
                            )
+                )
+        ),
+        tabItem('teamperformance',
+                fluidRow(
+                  box(width = 12, status = 'success',
+                      column(6,
+                             selectInput('team_performance_input', 'Choose a team',
+                                         choices = teams, selected = 'Chennai Super Kings')
+                      ),
+                      column(6,
+                             sliderInput('team_performance_year_input', 'Choose time period',
+                                         min = 2008, max = 2020, value = c(2008, 2020),
+                                         sep = "")
+                      )
+                  )
+                ),
+                fluidRow(
+                  tabBox(width = 12,
+                         tabPanel('Batting performance',
+                                  dataTableOutput('team_batting_performance') %>% withSpinner()),
+                         tabPanel('Bowling performance',
+                                  dataTableOutput('team_bowling_performance') %>% withSpinner())
+                  )
                 )
         ),
         tabItem('team_performance_2020',
@@ -1509,7 +1576,10 @@ server <- function(input, output, session) {
     
 #### 6. Top batsmen/bowlers
     
-    output$top_batsmen <- renderDataTable({get_top_batsmen()},
+    reactive_top_batsmen <- reactive({get_top_batsmen(input$top_player_year_input[1], input$top_player_year_input[2])})
+    reactive_top_bowler <- reactive({get_top_bowlers(input$top_player_year_input[1], input$top_player_year_input[2])})
+  
+    output$top_batsmen <- renderDataTable({reactive_top_batsmen()},
                                           selection = 'none',
                                           colnames = c('Batsman', "Runs", "Balls", 
                                                        "Strike Rate", "6s", "4s", "Highest score"),
@@ -1517,9 +1587,34 @@ server <- function(input, output, session) {
                                           options = list(dom = 'tp'),
                                           style = 'bootstrap')
     
-    output$top_bowlers <- renderDataTable({get_top_bowlers()},
+    output$top_bowlers <- renderDataTable({reactive_top_bowler()},
                                           selection = 'none',
-                                          colnames = c('Bowler', "Runs", "Balls", 
+                                          colnames = c('Bowler', "Runs conceded", "Balls", 
+                                                       "Wickets", "Strike Rate", "Economy Rate", "Average"),
+                                          rownames = F,
+                                          options = list(dom = 'tp'),
+                                          style = 'bootstrap')
+    
+#### 7. Team performance
+    
+    reactive_team_batting_performance <- reactive({get_team_batting_performance(input$team_performance_input,
+                                                                                input$team_performance_year_input[1], 
+                                                                                input$team_performance_year_input[2])})
+    reactive_team_bowling_performance <- reactive({get_team_bowling_performance(input$team_performance_input,
+                                                                                input$team_performance_year_input[1], 
+                                                                                input$team_performance_year_input[2])})
+    
+    output$team_batting_performance <- renderDataTable({reactive_team_batting_performance()},
+                                          selection = 'none',
+                                          colnames = c('Batsman', "Runs", "Balls",
+                                                       "Strike Rate", "6s", "4s", "Highest score"),
+                                          rownames = F,
+                                          options = list(dom = 'tp'),
+                                          style = 'bootstrap')
+    
+    output$team_bowling_performance <- renderDataTable({reactive_team_bowling_performance()},
+                                          selection = 'none',
+                                          colnames = c('Bowler', "Runs conceded", "Balls", 
                                                        "Wickets", "Strike Rate", "Economy Rate", "Average"),
                                           rownames = F,
                                           options = list(dom = 'tp'),
