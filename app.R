@@ -698,9 +698,10 @@ header <- dashboardHeader(
 
 sidebar <- dashboardSidebar(
     sidebarMenu(
-        menuItem("About the dashboard", tabName = 'about', icon = icon('info')),
-        menuItem('View by', tabName = 'overall_analysis', icon = icon('calculator'), startExpanded = TRUE,
-                 menuItem("Batsman", tabName = 'batsman', icon = icon('pen')), #1
+        menuItem("About", tabName = 'about', icon = icon('info')),
+        
+        menuItem('Explore by', tabName = 'overall_analysis', icon = icon('search'), startExpanded = TRUE,
+                 menuItem("Batsman", tabName = 'batsman', icon = icon('eraser')), #1
                  menuItem("Bowlers", tabName = 'bowler', icon = icon('baseball-ball')), #2
                  menuItem("Batsman vs. Bowler", tabName = 'batsmanvsbowler', icon = icon('user-friends')), #3
                  menuItem("Team performance", tabName = 'teamperformance', icon = icon('sitemap')), #7
@@ -709,10 +710,11 @@ sidebar <- dashboardSidebar(
                  menuItem("Head-to-head", tabName = 'headtohead', icon = icon('drum-steelpan')) #5
 
         ),
+        
+        menuItem('View the source code', href = 'https://github.com/lakshyaag/ipldashboard', newtab = T, 
+                 icon = icon('github')),
         menuItem('Created by Lakshya Agarwal', href = 'https://github.com/lakshyaag/', newtab = T, 
-                 icon = icon('magic')),
-        menuItem('Check out the code!', href = 'https://github.com/lakshyaag/ipldashboard', newtab = T, 
-                 icon = icon('github'))
+                 icon = icon('magic'))
     )
 )
 
@@ -725,17 +727,13 @@ body <- dashboardBody(
     tabItems(
         tabItem('about', 
                 fluidRow(
-                    box(title = 'Indian Premier League', width = 6, status = 'primary', solidHeader = T,
-                        p('The Indian Premier League is a professional Twenty20 cricket league in India contested during March-May of every year by eight teams representing eight different cities in India.'),
-                        p('The IPL is the most-attended cricket league in the world and in 2014 ranked sixth by average attendance among all sports leagues.')
+                    box(title = 'IPL Dashboard', width = 6, status = 'primary', solidHeader = T,
+                        p("The IPL Analytics Dashboard is your gateway to the captivating world of the Indian Premier League, a professional Twenty20 cricket league that takes place annually in India. This high-octane tournament showcases the best of cricket, bringing together teams representing different cities in India."),
+                        p("Gain unprecedented insights into every season, including the thrilling 2023 edition. Uncover fascinating statistics, delve into player performance, and explore strategic trends with our interactive platform."),
+                        p("Whether you're a passionate fan or a curious analyst, this dashboard offers a comprehensive view of runs scored, dismissals, strike rates, toss statistics, and more."),
+                        p("Embark on a data-driven journey and discover the untold stories behind the most memorable moments in cricket's most prestigious league!")
                     ),
-                    box(title = 'Analytics Dashboard', width = 6, status = 'warning', solidHeader = T,
-                        p('An interactive analytics dashboard for IPL which contains data from all seasons, including the latest 2023 season.'),
-                        p('You can analyze runs scored by season, dismissals, strike rates by player, toss statistics, season statistics and other insights. If you have any ideas, drop me a message.')
-                    )
-                ),
-                fluidRow(
-                    box(imageOutput('about_image'), width = 12)
+                    box(imageOutput('about_image'), width = 6)
                 )
         ),
         tabItem('batsman',
@@ -904,7 +902,7 @@ body <- dashboardBody(
                 )
         )
     ),
-    waiter_show_on_load(html = spin_wobblebar(), color = '#8bc9b4')
+    waiter_show_on_load(html = spin_wobblebar(), color = '#18bc9c')
 )
 
 ui <- dashboardPage(header, sidebar, body)
@@ -915,7 +913,7 @@ server <- function(input, output, session) {
     sever(html = sever_default(title = 'Disconnected!', 
                                subtitle = 'Your session ended.', 
                                button = 'Reload', button_class = 'info'),
-          color = 'white', bg_color = '#8bc9b4')
+          color = 'white', bg_color = '#18bc9c')
     
     waiter_hide()
 
@@ -923,7 +921,7 @@ server <- function(input, output, session) {
       width  <- session$clientData$output_about_image_width
       height <- session$clientData$output_about_image_height
       
-        list(src = 'NEW_Banner.jpg',
+        list(src = 'poster.jpg',
              width = width,
              height = height
              )},
