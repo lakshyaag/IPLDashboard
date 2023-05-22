@@ -34,4 +34,5 @@ vignettes/*.pdf
 # Temporary files created by R markdown
 *.utf8.md
 *.knit.md
-210408_data_updated.csv
+
+raw/
