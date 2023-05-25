@@ -930,10 +930,16 @@ get_venue_wins <- function(team_data, team_1, team_2) {
 ### 6. Top batsmen/bowlers
 
 #### 6.1. Top batsmen
-get_top_batsmen <- function(start_year, end_year) {
-  batsman_data <- balls %>%
+get_top_batsmen <- function(start_year, end_year, selected_team = NULL) {
+  if (!is.null(selected_team)) {
+    batsman_data <- balls %>%
+      filter(batting_team == selected_team)
+  } else {
+    batsman_data <- balls
+  }
+  
+  batsman_data <- batsman_data %>%
     group_by(batsman) %>%
-    filter(extra_runs == 0) %>%
     filter(season >= start_year & season <= end_year) %>%
     summarise(
       runs = sum(batsman_runs),
@@ -950,7 +956,7 @@ get_top_batsmen <- function(start_year, end_year) {
     mutate(high_score = max(runs)) %>%
     select(batsman, high_score) %>%
     distinct()
-  
+
   batsman_data <- batsman_data %>%
     left_join(highest_score, by = 'batsman') %>%
     arrange(desc(runs)) %>%
@@ -961,8 +967,15 @@ get_top_batsmen <- function(start_year, end_year) {
 
 
 #### 6.2. Top bowlers
-get_top_bowlers <- function(start_year, end_year) {
-  bowler_data <- balls %>%
+get_top_bowlers <- function(start_year, end_year, selected_team = NULL) {
+  if (!is.null(selected_team)) {
+    bowler_data <- balls %>%
+      filter(bowling_team == selected_team)
+  } else {
+    bowler_data <- balls
+  }
+  
+  bowler_data <- bowler_data %>%
     group_by(bowler) %>%
     filter(season >= start_year & season <= end_year) %>%
     summarise(
@@ -991,7 +1004,7 @@ get_team_batting_performance <-
       filter(season >= start_year & season <= end_year) %>%
       filter(batting_team == team) %>%
       distinct(batsman) %>%
-      left_join(get_top_batsmen(start_year, end_year), by = 'batsman') %>%
+      left_join(get_top_batsmen(start_year, end_year, team), by = 'batsman') %>%
       arrange(desc(runs))
     
     return(team_batting_performance)
@@ -1005,7 +1018,7 @@ get_team_bowling_performance <-
       filter(season >= start_year & season <= end_year) %>%
       filter(bowling_team == team) %>%
       distinct(bowler) %>%
-      left_join(get_top_bowlers(start_year, end_year), by = 'bowler') %>%
+      left_join(get_top_bowlers(start_year, end_year, team), by = 'bowler') %>%
       arrange(desc(wickets))
     
     return(team_bowling_performance)
