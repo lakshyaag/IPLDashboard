@@ -20,9 +20,10 @@
 ### TO-DO
 
 - [x] Team statistics
+- [x] Bowler performance for batsman
+- [x] Batsman performance for bowler
+- [x] Player head-to-head
 - [ ] Venue statistics
-- [ ] Worst bowlers for a batsman
-- [ ] Worst batsmen for a bowler
 - [ ] Fix head-to-head insights
 
 ### Data
