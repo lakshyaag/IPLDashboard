@@ -23,8 +23,8 @@
 - [x] Bowler performance for batsman
 - [x] Batsman performance for bowler
 - [x] Player head-to-head
+- [x] Fix head-to-head insights
 - [ ] Venue statistics
-- [ ] Fix head-to-head insights
 
 ### Data
 

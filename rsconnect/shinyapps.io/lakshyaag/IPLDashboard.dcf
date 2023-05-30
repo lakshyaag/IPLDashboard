@@ -5,10 +5,10 @@ account: lakshyaag
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 2290801
-bundleId: 7247233
+bundleId: 7261637
 url: https://lakshyaag.shinyapps.io/IPLDashboard/
-when: 1684747975.24049
-lastSyncTime: 1684747975.24049
+when: 1685006822.96263
+lastSyncTime: 1685006822.96263
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: clean.ipynb|clean_yaml_deliveries.Rmd|data.csv|data_updated.csv|raw
+ignoredFiles: clean.ipynb|clean_yaml_deliveries.Rmd|raw

@@ -22,9 +22,6 @@ options(spinner.type = 8)
 balls <- vroom('data_updated_2023.csv', delim = ',') %>%
   mutate(date = ymd(date))
 
-balls_latest <-
-  balls %>% filter(season == 2022) %>% mutate(stadium = str_c(venue, city, sep = ", "))
-
 ## Defining themes and colors
 
 theme_ipl <- function() {
@@ -101,7 +98,7 @@ get_plotly <- function(plot) {
 ## Plotting functions start here -----------
 
 ### 1. Batsman
-#### 1.1. Runs per season
+#### 1.1. Runs by season
 get_batsman_runs <- function(batsman_name) {
   batsman_data <- balls %>%
     filter(batsman == batsman_name) %>%
@@ -189,7 +186,7 @@ get_batsman_distribution_runs <- function(batsman_name) {
   return(plot)
 }
 
-#### 1.3. Strike rate per season
+#### 1.3. Strike rate by season
 get_batsman_strike_rate <- function(batsman_name) {
   batsman_data <- balls %>%
     filter(batsman == batsman_name) %>%
@@ -356,7 +353,7 @@ get_runs_per_over_grouped <- function(batsman_name) {
     rename("over" = over_group) %>%
     group_by(over) %>%
     summarise(batsman_runs = sum(batsman_runs)) %>%
-    mutate(over = fct_relevel(over, c('0-6', '7-11', '12-15', '16-20'))) %>%
+    mutate(over = fct_relevel(over, c('1-6', '7-11', '12-15', '16-20'))) %>%
     ggplot(aes(
       x = over,
       y = batsman_runs,
@@ -374,8 +371,38 @@ get_runs_per_over_grouped <- function(batsman_name) {
   return(plot)
 }
 
+#### 1.8. Performance by season
+get_batsman_season_performance <- function(batsman_name) {
+  
+  batsman_data <- balls %>%
+    filter(batsman == batsman_name) %>%
+    group_by(season, batting_team) %>%
+    summarise(
+      runs = sum(batsman_runs),
+      balls = length(ball),
+      strike_rate = round(runs / balls * 100, 2),
+      sixes = sum(batsman_runs == 6),
+      fours = sum(batsman_runs == 4)
+    )
+  
+  highest_score <- balls %>%
+    filter(batsman == batsman_name) %>%
+    group_by(season, match_id) %>%
+    summarise(runs = sum(batsman_runs)) %>%
+    mutate(high_score = max(runs)) %>%
+    select(season, high_score) %>%
+    distinct()
+  
+  batsman_data <- batsman_data %>%
+    left_join(highest_score, by = 'season') %>%
+    arrange(desc(season))
+  
+  return(batsman_data)
+}
+
+
 ### 2. Bowler
-#### 2.2. Runs conceded per season
+#### 2.2. Runs conceded by season
 get_bowler_runs <- function(bowler_name) {
   bowler_data <- balls %>%
     filter(bowler == bowler_name) %>%
@@ -413,7 +440,7 @@ get_bowler_runs <- function(bowler_name) {
   return(plot)
 }
 
-#### 2.3. Economy rate per season
+#### 2.3. Economy rate by season
 get_economy_rate <- function(bowler_name) {
   bowler_data <- balls %>%
     filter(bowler == bowler_name) %>%
@@ -455,7 +482,7 @@ get_economy_rate <- function(bowler_name) {
   
 }
 
-#### 2.1. Wickets per season
+#### 2.1. Wickets by season
 get_wickets_by_season <- function(bowler_name) {
   bowler_data <- balls %>%
     filter(bowler == bowler_name) %>%
@@ -552,6 +579,30 @@ get_batsman_performance <- function(bowler_name) {
   return (batsman_performance)
   
 }
+
+
+#### 2.6. Performance by season
+get_bowler_season_performance <- function(bowler_name) {
+  
+  bowler_data <- balls %>%
+    filter(bowler == bowler_name) %>%
+    group_by(season, bowling_team) %>%
+    summarise(
+      runs = sum(total_runs),
+      balls = length(ball),
+      wickets = sum(!is.na(dismissal_kind) &
+                      !dismissal_kind == 'run out'),
+      strike_rate = round(balls / wickets, 2),
+      economy_rate = round(runs / (balls / 6), 2),
+      average = round(runs / wickets, 2)
+    ) %>%
+    arrange(desc(season))
+  
+  return(bowler_data)
+  
+}
+
+
 ### 3. Batsman vs. Bowler
 #### 3.1. Strike Rate
 get_strike_rate_batsman_bowler <-
@@ -727,7 +778,7 @@ get_season_stats <- function(season_selected) {
   
   best_economy <- balls %>%
     group_by(season, bowler, bowling_team) %>%
-    summarise(runs = sum(total_runs), overs = floor(length(ball) / 6)) %>%
+    summarise(runs = sum(total_runs), overs = (length(ball) / 6)) %>%
     mutate(economy = round(runs / overs, 2)) %>%
     arrange(economy) %>%
     group_by(season) %>%
@@ -939,7 +990,7 @@ get_top_batsmen <- function(start_year, end_year, selected_team = NULL) {
   }
   
   batsman_data <- batsman_data %>%
-    group_by(batsman) %>%
+    group_by(batsman, batting_team) %>%
     filter(season >= start_year & season <= end_year) %>%
     summarise(
       runs = sum(batsman_runs),
@@ -976,7 +1027,7 @@ get_top_bowlers <- function(start_year, end_year, selected_team = NULL) {
   }
   
   bowler_data <- bowler_data %>%
-    group_by(bowler) %>%
+    group_by(bowler, bowling_team) %>%
     filter(season >= start_year & season <= end_year) %>%
     summarise(
       runs = sum(total_runs),
@@ -984,7 +1035,7 @@ get_top_bowlers <- function(start_year, end_year, selected_team = NULL) {
       wickets = sum(!is.na(dismissal_kind) &
                       !dismissal_kind == 'run out'),
       strike_rate = round(balls / wickets, 2),
-      economy_rate = round(runs / floor(balls / 6), 2),
+      economy_rate = round(runs / (balls / 6), 2),
       average = round(runs / wickets, 2)
     )
   
@@ -1005,7 +1056,8 @@ get_team_batting_performance <-
       filter(batting_team == team) %>%
       distinct(batsman) %>%
       left_join(get_top_batsmen(start_year, end_year, team), by = 'batsman') %>%
-      arrange(desc(runs))
+      arrange(desc(runs)) %>%
+      select(-batting_team)
     
     return(team_batting_performance)
   }
@@ -1019,7 +1071,8 @@ get_team_bowling_performance <-
       filter(bowling_team == team) %>%
       distinct(bowler) %>%
       left_join(get_top_bowlers(start_year, end_year, team), by = 'bowler') %>%
-      arrange(desc(wickets))
+      arrange(desc(wickets)) %>%
+      select(-bowling_team)
     
     return(team_bowling_performance)
   }
@@ -1103,7 +1156,7 @@ body <- dashboardBody(
                   "The IPL Analytics Dashboard is your gateway to the captivating world of the Indian Premier League, a professional Twenty20 cricket league that takes place annually in India. This high-octane tournament showcases the best of cricket, bringing together teams representing different cities in India."
                 ),
                 p(
-                  "Gain unprecedented insights into every season, including the thrilling 2023 edition. Uncover fascinating statistics, delve into player performance, and explore strategic trends with our interactive platform."
+                  "Gain unprecedented insights into every season, including the thrilling 2023 edition. Uncover fascinating statistics, delve into player performance, and explore strategic trends with this interactive platform."
                 ),
                 p(
                   "Whether you're a passionate fan or a curious analyst, this dashboard offers a comprehensive view of runs scored, dismissals, strike rates, toss statistics, and more."
@@ -1132,15 +1185,19 @@ body <- dashboardBody(
               tabBox(
                 width = 12,
                 tabPanel(
-                  "Runs per season",
+                  "Runs by season",
                   plotlyOutput('runs_per_season') %>% withSpinner()
+                ),
+                tabPanel(
+                  "Performance by season",
+                  dataTableOutput('batsman_performance_by_season') %>% withSpinner()
                 ),
                 tabPanel(
                   "Distribution of runs",
                   plotlyOutput('distribution_of_runs') %>% withSpinner()
                 ),
                 tabPanel(
-                  "Strike rate per season",
+                  "Strike rate by season",
                   plotlyOutput('strike_rate_per_season') %>% withSpinner()
                 ),
                 tabPanel(
@@ -1179,15 +1236,19 @@ body <- dashboardBody(
               tabBox(
                 width = 12,
                 tabPanel(
-                  'Wickets per season',
+                  'Wickets by season',
                   plotlyOutput('wickets_per_season') %>% withSpinner()
                 ),
                 tabPanel(
-                  "Runs conceded per season",
+                  "Performance by season",
+                  dataTableOutput('bowler_performance_by_season') %>% withSpinner()
+                ),
+                tabPanel(
+                  "Runs conceded by season",
                   plotlyOutput('runs_conceded_per_season') %>% withSpinner()
                 ),
                 tabPanel(
-                  "Economy rate per season",
+                  "Economy rate by season",
                   plotlyOutput('economy_rate_per_season') %>% withSpinner()
                 ),
                 tabPanel(
@@ -1424,6 +1485,25 @@ server <- function(input, output, session) {
     get_batsman_runs(input$batsman_selected)
   })
   
+  output$batsman_performance_by_season <-
+    renderDataTable({
+      get_batsman_season_performance(input$batsman_selected)
+    },
+    selection = 'none',
+    colnames = c(
+      'Season',
+      'Team',
+      "Runs",
+      "Balls",
+      "Strike Rate",
+      "6s",
+      "4s",
+      "Highest score"
+    ),
+    rownames = F,
+    options = list(dom = 'tp'),
+    style = 'bootstrap')
+  
   output$distribution_of_runs <- renderPlotly({
     get_batsman_distribution_runs(input$batsman_selected)
   })
@@ -1480,6 +1560,25 @@ server <- function(input, output, session) {
   output$wickets_per_over <- renderPlotly({
     get_wickets_by_over(input$bowler_selected)
   })
+  
+  output$bowler_performance_by_season <-
+    renderDataTable({
+      get_bowler_season_performance(input$bowler_selected)
+    },
+    selection = 'none',
+    colnames = c(
+      'Season',
+      'Team',
+      "Runs conceded",
+      "Balls",
+      "Wickets",
+      "Strike Rate",
+      "Economy Rate",
+      "Average"
+    ),
+    rownames = F,
+    options = list(dom = 'tp'),
+    style = 'bootstrap')
   
   output$batsman_performance <-
     renderDataTable({
@@ -1604,7 +1703,7 @@ server <- function(input, output, session) {
   
   output$most_fours_box <- renderValueBox({
     valueBox(
-      paste0(season_data()$most_fours, '(', season_data()$fours, ')'),
+      paste0(season_data()$most_fours, ' (', season_data()$fours, ')'),
       "Most fours",
       color = "navy"
     )
@@ -1715,6 +1814,7 @@ server <- function(input, output, session) {
   selection = 'none',
   colnames = c(
     'Batsman',
+    'Team',
     "Runs",
     "Balls",
     "Strike Rate",
@@ -1732,6 +1832,7 @@ server <- function(input, output, session) {
   selection = 'none',
   colnames = c(
     'Bowler',
+    'Team',
     "Runs conceded",
     "Balls",
     "Wickets",
