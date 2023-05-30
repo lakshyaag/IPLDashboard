@@ -1,7 +1,7 @@
 
 # IPL Analytics Dashboard (v2)
 
-> Last updated: 22/05/2023
+> Last updated: 30/05/2023
 
 **A dashboard (Shiny web-app) for visualizing the [Indian Premier League (IPL)](http://www.iplt20.com/) over time (2008-2023).**
 
